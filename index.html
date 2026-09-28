@@ -1,42 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="system">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Book to PDF</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-:root{--bg:#f3f1ec;--ink:#1d2420;--mute:#66706a;--card:#fff;--line:#d5d9d3;--acc:#1f5f4a;--acc-ink:#fff;--err:#a3311f;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a17;--ink:#e8ece9;--mute:#94a09a;--card:#1c2420;--line:#2f3a34;--acc:#5fc39f;--acc-ink:#0d1a14;--err:#ff8f7a}}
-*{box-sizing:border-box}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif}
-main{max-width:640px;margin:0 auto;padding:28px 18px 48px}
-h1{font-size:2rem;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
-p.sub{margin:0 0 22px;color:var(--mute)}
-#drop{border:2px dashed var(--line);border-radius:10px;padding:34px 16px;text-align:center;background:var(--card);cursor:pointer;transition:border-color .15s}
-#drop.over,#drop:focus-visible{border-color:var(--acc);outline:none}
-#drop b{display:block;font-size:1.1rem}
-#drop span{color:var(--mute);font-size:.9rem}
-ul{list-style:none;margin:16px 0 0;padding:0}
-li{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-family:system-ui,sans-serif;font-size:.92rem}
-li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-li .s{color:var(--mute);font-size:.82rem}
-li .s.err{color:var(--err)}
-button,a.btn{font:600 .95rem system-ui,sans-serif;border:0;border-radius:8px;padding:10px 16px;background:var(--acc);color:var(--acc-ink);cursor:pointer;text-decoration:none;display:inline-block}
-button.ghost{background:transparent;color:var(--mute);padding:4px 8px;font-size:1.1rem}
-button:disabled{opacity:.45;cursor:not-allowed}
-button:focus-visible,a.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
-#msg{margin-top:14px;color:var(--mute);font:.88rem system-ui,sans-serif;min-height:1.3em}
-.note{margin-top:28px;font:.82rem/1.5 system-ui,sans-serif;color:var(--mute);border-top:1px solid var(--line);padding-top:14px}
+:root {
+  --bg: #f3f1ec;
+  --ink: #1d2420;
+  --mute: #66706a;
+  --card: #ffffff;
+  --line: #d5d9d3;
+  --acc: #1f5f4a;
+  --acc-ink: #ffffff;
+  --err: #a3311f;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme="dark"] {
+  --bg: #141a17;
+  --ink: #e8ece9;
+  --mute: #94a09a;
+  --card: #1c2420;
+  --line: #2f3a34;
+  --acc: #5fc39f;
+  --acc-ink: #0d1a14;
+  --err: #ff8f7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #141a17;
+    --ink: #e8ece9;
+    --mute: #94a09a;
+    --card: #1c2420;
+    --line: #2f3a34;
+    --acc: #5fc39f;
+    --acc-ink: #0d1a14;
+    --err: #ff8f7a;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 Georgia, "Times New Roman", serif; transition: background 0.2s, color 0.2s; }
+main { max-width: 640px; margin: 0 auto; padding: 28px 18px 48px; }
+
+header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+h1 { font-size: 2rem; line-height: 1.15; margin: 0; letter-spacing: -.01em; }
+p.sub { margin: 6px 0 22px; color: var(--mute); }
+
+#theme-toggle {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+#drop { border: 2px dashed var(--line); border-radius: 10px; padding: 34px 16px; text-align: center; background: var(--card); cursor: pointer; transition: border-color .15s; }
+#drop.over, #drop:focus-visible { border-color: var(--acc); outline: none; }
+#drop b { display: block; font-size: 1.1rem; }
+#drop span { color: var(--mute); font-size: .9rem; }
+
+ul { list-style: none; margin: 16px 0 0; padding: 0; }
+li { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-family: system-ui, sans-serif; font-size: .92rem; }
+li .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+li .s { color: var(--mute); font-size: .82rem; margin-right: 4px; }
+li .s.err { color: var(--err); }
+
+button, a.btn { font: 600 .95rem system-ui, sans-serif; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--acc); color: var(--acc-ink); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+button.ghost { background: transparent; color: var(--mute); padding: 4px 8px; font-size: 1.1rem; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, a.btn:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+.row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+#msg { margin-top: 14px; color: var(--mute); font: .88rem system-ui, sans-serif; min-height: 1.3em; }
+.note { margin-top: 28px; font: .82rem/1.5 system-ui, sans-serif; color: var(--mute); border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* Modal Reader Styles */
+#reader-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+#reader-modal.active { display: flex; }
+.modal-content { background: var(--bg); color: var(--ink); border: 1px solid var(--line); width: 100%; max-width: 720px; height: 85vh; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-header { padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { font-size: 1.1rem; margin: 0; font-family: system-ui, sans-serif; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.modal-body { padding: 28px; overflow-y: auto; flex: 1; font-size: 1.05rem; line-height: 1.7; }
+.modal-body img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+.modal-body h1, .modal-body h2, .modal-body h3 { page-break-after: avoid; }
+
+/* Hidden Offscreen Container for PDF Generation */
+#pdf-render-container { position: absolute; left: -9999px; top: -9999px; width: 680px; background: #ffffff; color: #000000; font-family: Georgia, serif; padding: 20px; }
+#pdf-render-container img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+#pdf-render-container .page-break { page-break-before: always; }
 </style>
 </head>
 <body>
 <main>
-<h1>Book to PDF</h1>
+<header>
+  <h1>Book to PDF</h1>
+  <button id="theme-toggle" aria-label="Toggle Theme">🌙 Dark</button>
+</header>
 <p class="sub">Convert up to 5 books at once. Files stay in your browser and are never uploaded.</p>
 
 <div id="drop" tabindex="0" role="button" aria-label="Choose book files">
@@ -52,15 +122,48 @@ button:focus-visible,a.btn:focus-visible{outline:3px solid var(--acc);outline-of
 </div>
 <div id="msg" role="status"></div>
 
-<p class="note">Output is text-only: images and custom fonts are left out, and characters outside Latin scripts (Tamil, Telugu, Hindi and so on) can't be drawn by the built-in PDF font. MOBI, AZW3 and KFX aren't supported in the browser; convert those to EPUB first.</p>
+<p class="note">All processing is done completely inside your browser. MOBI, AZW3, and KFX formats are not natively supported; convert those to EPUB first.</p>
 </main>
+
+<!-- Reader Modal -->
+<div id="reader-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="reader-title">Book Reader</h2>
+      <button class="ghost" id="close-modal">✕</button>
+    </div>
+    <div class="modal-body" id="reader-body"></div>
+  </div>
+</div>
+
+<!-- Offscreen PDF Renderer -->
+<div id="pdf-render-container"></div>
 
 <script>
 const MAX = 5;
 let files = [];
 const $ = id => document.getElementById(id);
-const drop = $('drop'), input = $('file'), list = $('list'), go = $('go'), msg = $('msg');
+const drop = $('drop'), input = $('file'), list =$('list'), go = $('go'), msg =$('msg');
 
+/* Theme Toggle Logic */
+const themeToggle = $('theme-toggle');
+const savedTheme = localStorage.getItem('theme') || 'system';
+document.documentElement.setAttribute('data-theme', savedTheme);
+updateThemeButton(savedTheme);
+
+themeToggle.onclick = () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeButton(next);
+};
+
+function updateThemeButton(theme) {
+  themeToggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+}
+
+/* File Drag & Drop */
 drop.onclick = () => input.click();
 drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
 drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
@@ -75,7 +178,7 @@ function add(fl) {
   for (const f of fl) {
     if (!ok.test(f.name)) { skipped++; continue; }
     if (files.length >= MAX) { over++; continue; }
-    files.push({ file: f, status: 'Ready', err: false, url: null });
+    files.push({ file: f, status: 'Ready', err: false, url: null, htmlContent: '', title: '' });
   }
   msg.textContent = [over && `Only ${MAX} books at a time; ${over} not added.`, skipped && `${skipped} unsupported file(s) skipped.`].filter(Boolean).join(' ');
   render();
@@ -88,11 +191,18 @@ function render() {
     li.innerHTML = `<span class="n"></span><span class="s${it.err ? ' err' : ''}"></span>`;
     li.querySelector('.n').textContent = it.file.name;
     li.querySelector('.s').textContent = it.status;
+    
     if (it.url) {
+      const readBtn = document.createElement('button');
+      readBtn.className = 'secondary';
+      readBtn.textContent = 'Read';
+      readBtn.onclick = () => openReader(it.title, it.htmlContent);
+
       const a = document.createElement('a');
       a.className = 'btn'; a.href = it.url; a.textContent = 'Download';
       a.download = it.file.name.replace(/\.[^.]+$/, '') + '.pdf';
-      li.append(a);
+      
+      li.append(readBtn, a);
     } else {
       const x = document.createElement('button');
       x.className = 'ghost'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove ' + it.file.name);
@@ -110,11 +220,15 @@ go.onclick = async () => {
     if (it.url) continue;
     try {
       it.status = 'Reading…'; render();
-      const book = await readBook(it.file);
-      it.status = 'Making PDF…'; render();
-      await new Promise(r => setTimeout(r));
-      const blob = makePdf(book);
-      it.url = URL.createObjectURL(blob);
+      const parsed = await parseBookToHTML(it.file);
+      it.htmlContent = parsed.html;
+      it.title = parsed.title;
+
+      it.status = 'Generating PDF…'; render();
+      await new Promise(r => setTimeout(r, 100));
+      
+      const pdfBlob = await renderHtmlToPdfBlob(it.htmlContent, it.title);
+      it.url = URL.createObjectURL(pdfBlob);
       it.status = 'Done';
     } catch (e) {
       console.error(e);
@@ -122,110 +236,149 @@ go.onclick = async () => {
     }
     render();
   }
-  msg.textContent = 'Finished. Tap Download beside each book.';
+  msg.textContent = 'Finished. Read or Download your books below.';
 };
 
-/* ---------- readers: each returns {title, blocks:[{t:'h1'|'h2'|'p', x:string}]} ---------- */
-async function readBook(f) {
+/* Reader Modal Logic */
+function openReader(title, html) {
+  $('reader-title').textContent = title;
+  $('reader-body').innerHTML = html;
+  $('reader-modal').classList.add('active');
+}
+
+$('close-modal').onclick = () => $('reader-modal').classList.remove('active');$('reader-modal').onclick = e => { if (e.target === $('reader-modal'))$('reader-modal').classList.remove('active'); };
+
+/* PDF Generation using html2pdf */
+async function renderHtmlToPdfBlob(html, title) {
+  const container = $('pdf-render-container');
+  container.innerHTML = `<h1>${title}</h1><hr/><br/>` + html;
+  
+  const opt = {
+    margin: [15, 15, 15, 15],
+    filename: `${title}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] }
+  };
+
+  const pdfBlob = await html2pdf().set(opt).from(container).output('blob');
+  container.innerHTML = '';
+  return pdfBlob;
+}
+
+/* ---------- Book Parsers ---------- */
+async function parseBookToHTML(f) {
   const ext = f.name.split('.').pop().toLowerCase();
   const title = f.name.replace(/\.[^.]+$/, '');
-  if (ext === 'epub') return readEpub(f, title);
+  
+  if (ext === 'epub') return parseEpub(f, title);
+  
   const text = await f.text();
-  if (ext === 'txt') return { title, blocks: text.split(/\n\s*\n/).map(x => ({ t: 'p', x: x.replace(/\s*\n\s*/g, ' ').trim() })).filter(b => b.x) };
-  if (ext === 'fb2') return { title, blocks: fromDom(new DOMParser().parseFromString(text, 'text/xml'), 'title,p,subtitle', title) };
-  return { title, blocks: fromDom(new DOMParser().parseFromString(text, 'text/html'), 'h1,h2,h3,h4,h5,h6,p,li,pre,blockquote', title) };
-}
-
-function fromDom(doc, sel, title) {
-  const out = [];
-  doc.querySelectorAll(sel).forEach(el => {
-    const x = el.textContent.replace(/\s+/g, ' ').trim();
-    if (!x) return;
-    const tag = el.tagName.toLowerCase();
-    out.push({ t: tag === 'h1' || tag === 'title' ? 'h1' : /^h[2-6]$/.test(tag) || tag === 'subtitle' ? 'h2' : 'p', x });
-  });
-  if (!out.length) {
-    const x = (doc.body || doc.documentElement).textContent.replace(/\s+/g, ' ').trim();
-    if (x) out.push({ t: 'p', x });
+  if (ext === 'txt') {
+    const html = text.split(/\n\s*\n/).map(p => `<p>${escapeHtml(p.trim())}</p>`).join('');
+    return { title, html };
   }
-  return out;
+  
+  const doc = new DOMParser().parseFromString(text, ext === 'fb2' ? 'text/xml' : 'text/html');
+  doc.querySelectorAll('script, style').forEach(el => el.remove());
+  return { title, html: doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML };
 }
 
-function resolve(base, href) {
-  const parts = (base + decodeURIComponent(href.split('#')[0])).split('/'), out = [];
-  for (const p of parts) { if (p === '..') out.pop(); else if (p && p !== '.') out.push(p); }
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function resolvePath(base, href) {
+  const parts = (base + decodeURIComponent(href.split('#')[0])).split('/');
+  const out = [];
+  for (const p of parts) { 
+    if (p === '..') out.pop(); 
+    else if (p && p !== '.') out.push(p); 
+  }
   return out.join('/');
 }
 
-async function readEpub(f, fallbackTitle) {
+async function parseEpub(f, fallbackTitle) {
   const zip = await JSZip.loadAsync(f);
-  const cont = zip.file('META-INF/container.xml');
-  if (!cont) throw new Error('Not a valid EPUB');
-  const opfPath = /full-path="([^"]+)"/.exec(await cont.async('string'))[1];
-  const base = opfPath.includes('/') ? opfPath.replace(/[^/]+$/, '') : '';
-  const opf = new DOMParser().parseFromString(await zip.file(opfPath).async('string'), 'text/xml');
-  const titleEl = opf.getElementsByTagNameNS('*', 'title')[0];
-  const author = opf.getElementsByTagNameNS('*', 'creator')[0];
+  const containerFile = zip.file('META-INF/container.xml');
+  if (!containerFile) throw new Error('Invalid EPUB format');
+  
+  const containerXml = await containerFile.async('string');
+  const opfPathMatch = /full-path="([^"]+)"/.exec(containerXml);
+  if (!opfPathMatch) throw new Error('Invalid EPUB structure');
+  
+  const opfPath = opfPathMatch[1];
+  const baseDir = opfPath.includes('/') ? opfPath.replace(/[^/]+$/, '') : '';
+  const opfXml = await zip.file(opfPath).async('string');
+  const opfDoc = new DOMParser().parseFromString(opfXml, 'text/xml');
+  
+  const titleEl = opfDoc.getElementsByTagNameNS('*', 'title')[0];
+  const title = titleEl ? titleEl.textContent.trim() : fallbackTitle;
+  
   const manifest = {};
-  for (const it of opf.getElementsByTagNameNS('*', 'item')) manifest[it.getAttribute('id')] = it.getAttribute('href');
-  const blocks = [];
-  for (const ref of opf.getElementsByTagNameNS('*', 'itemref')) {
-    const href = manifest[ref.getAttribute('idref')];
-    const entry = href && zip.file(resolve(base, href));
-    if (!entry) continue;
-    const doc = new DOMParser().parseFromString(await entry.async('string'), 'text/html');
-    doc.querySelectorAll('script,style').forEach(n => n.remove());
-    const got = fromDom(doc, 'h1,h2,h3,h4,h5,h6,p,li,pre,blockquote', '');
-    if (got.length && got[0].t === 'h1') got[0].newPage = true;
-    blocks.push(...got);
+  for (const item of opfDoc.getElementsByTagNameNS('*', 'item')) {
+    manifest[item.getAttribute('id')] = item.getAttribute('href');
   }
-  if (!blocks.length) throw new Error('No readable text (DRM or image-only book?)');
-  return { title: (titleEl && titleEl.textContent.trim()) || fallbackTitle, author: author ? author.textContent.trim() : '', blocks };
-}
 
-/* ---------- PDF ---------- */
-function clean(s) {
-  return s.replace(/[^\u0020-\u007E\u00A0-\u00FF\u2018\u2019\u201C\u201D\u2013\u2014\u2026\u2022]/g, '?');
-}
-
-function makePdf(book) {
-  const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
-  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-  const M = 60, width = W - M * 2;
-  let y = M;
-
-  const write = (text, size, style, gapAfter, lead) => {
-    doc.setFont('times', style); doc.setFontSize(size);
-    const lh = size * (lead || 1.4);
-    for (const line of doc.splitTextToSize(clean(text), width)) {
-      if (y + lh > H - M) { doc.addPage(); y = M; }
-      doc.text(line, M, y + size);
-      y += lh;
+  // Pre-extract images as Data URIs for offline PDF rendering
+  const imageCache = {};
+  for (const id in manifest) {
+    const href = manifest[id];
+    if (/\.(png|jpe?g|gif|webp|svg)$/i.test(href)) {
+      const fullPath = resolvePath(baseDir, href);
+      const imgFile = zip.file(fullPath);
+      if (imgFile) {
+        const base64 = await imgFile.async('base64');
+        const ext = href.split('.').pop().toLowerCase();
+        const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        imageCache[fullPath] = `data:${mime};base64,${base64}`;
+        imageCache[href] = imageCache[fullPath]; 
+      }
     }
-    y += gapAfter;
-  };
-
-  doc.setFont('times', 'bold'); doc.setFontSize(26);
-  y = H / 3;
-  write(book.title, 26, 'bold', 14, 1.25);
-  if (book.author) write(book.author, 14, 'italic', 0);
-  doc.addPage(); y = M;
-
-  for (const b of book.blocks) {
-    if (b.t === 'h1') {
-      if (b.newPage && y > M) { doc.addPage(); y = M; }
-      write(b.x, 20, 'bold', 14, 1.3);
-    } else if (b.t === 'h2') {
-      y += 6; write(b.x, 14, 'bold', 8, 1.3);
-    } else write(b.x, 11.5, 'normal', 7, 1.45);
   }
 
-  const n = doc.getNumberOfPages();
-  for (let i = 2; i <= n; i++) {
-    doc.setPage(i); doc.setFont('times', 'normal'); doc.setFontSize(9);
-    doc.text(String(i - 1), W / 2, H - 30, { align: 'center' });
+  // Process spine documents sequentially
+  const htmlParts = [];
+  const spineItems = opfDoc.getElementsByTagNameNS('*', 'itemref');
+  
+  for (const ref of spineItems) {
+    const idref = ref.getAttribute('idref');
+    const href = manifest[idref];
+    if (!href) continue;
+    
+    const docPath = resolvePath(baseDir, href);
+    const docFile = zip.file(docPath);
+    if (!docFile) continue;
+    
+    const docXml = await docFile.async('string');
+    const doc = new DOMParser().parseFromString(docXml, 'text/html');
+    
+    doc.querySelectorAll('script, style, link').forEach(n => n.remove());
+    
+    // Embed inline image data sources
+    doc.querySelectorAll('img, image').forEach(img => {
+      const srcAttr = img.tagName.toLowerCase() === 'image' ? 'xlink:href' : 'src';
+      const rawSrc = img.getAttribute(srcAttr);
+      if (rawSrc) {
+        const resolvedImgPath = resolvePath(docPath.replace(/[^/]+$/, ''), rawSrc);
+        if (imageCache[resolvedImgPath]) {
+          img.setAttribute('src', imageCache[resolvedImgPath]);
+        } else if (imageCache[rawSrc]) {
+          img.setAttribute('src', imageCache[rawSrc]);
+        }
+      }
+    });
+
+    const docBody = doc.body || doc.documentElement;
+    if (docBody && docBody.innerHTML.trim()) {
+      htmlParts.push(`<div class="epub-chapter page-break">${docBody.innerHTML}</div>`);
+    }
   }
-  return doc.output('blob');
+
+  if (!htmlParts.length) throw new Error('No readable chapters found in EPUB');
+  
+  return { title, html: htmlParts.join('') };
 }
 </script>
 </body>
