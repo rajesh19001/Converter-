@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Book to PDF</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#f3f1ec;--ink:#1d2420;--mute:#66706a;--card:#fff;--line:#d5d9d3;--acc:#1f5f4a;--acc-ink:#fff;--err:#a3311f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a17;--ink:#e8ece9;--mute:#94a09a;--card:#1c2420;--line:#2f3a34;--acc:#5fc39f;--acc-ink:#0d1a14;--err:#ff8f7a}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif}
+main{max-width:640px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:2rem;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+p.sub{margin:0 0 22px;color:var(--mute)}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:34px 16px;text-align:center;background:var(--card);cursor:pointer;transition:border-color .15s}
+#drop.over,#drop:focus-visible{border-color:var(--acc);outline:none}
+#drop b{display:block;font-size:1.1rem}
+#drop span{color:var(--mute);font-size:.9rem}
+ul{list-style:none;margin:16px 0 0;padding:0}
+li{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-family:system-ui,sans-serif;font-size:.92rem}
+li .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li .s{color:var(--mute);font-size:.82rem}
+li .s.err{color:var(--err)}
+button,a.btn{font:600 .95rem system-ui,sans-serif;border:0;border-radius:8px;padding:10px 16px;background:var(--acc);color:var(--acc-ink);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost{background:transparent;color:var(--mute);padding:4px 8px;font-size:1.1rem}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,a.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+#msg{margin-top:14px;color:var(--mute);font:.88rem system-ui,sans-serif;min-height:1.3em}
+.note{margin-top:28px;font:.82rem/1.5 system-ui,sans-serif;color:var(--mute);border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Book to PDF</h1>
+<p class="sub">Convert up to 5 books at once. Files stay in your browser and are never uploaded.</p>
+
+<div id="drop" tabindex="0" role="button" aria-label="Choose book files">
+<b>Drop books here or tap to choose</b>
+<span>EPUB, TXT, HTML, FB2 · maximum 5 files</span>
+</div>
+<input id="file" type="file" multiple accept=".epub,.txt,.html,.htm,.xhtml,.fb2" hidden>
+
+<ul id="list"></ul>
+<div class="row">
+<button id="go" disabled>Convert to PDF</button>
+<button id="clear" class="ghost" aria-label="Clear list" title="Clear list">Clear</button>
+</div>
+<div id="msg" role="status"></div>
+
+<p class="note">Output is text-only: images and custom fonts are left out, and characters outside Latin scripts (Tamil, Telugu, Hindi and so on) can't be drawn by the built-in PDF font. MOBI, AZW3 and KFX aren't supported in the browser; convert those to EPUB first.</p>
+</main>
+
+<script>
+const MAX = 5;
+let files = [];
+const $ = id => document.getElementById(id);
+const drop = $('drop'), input = $('file'), list = $('list'), go = $('go'), msg = $('msg');
+
+drop.onclick = () => input.click();
+drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); add(e.dataTransfer.files); };
+input.onchange = () => { add(input.files); input.value = ''; };
+$('clear').onclick = () => { files = []; msg.textContent = ''; render(); };
+
+function add(fl) {
+  const ok = /\.(epub|txt|html?|xhtml|fb2)$/i;
+  let skipped = 0, over = 0;
+  for (const f of fl) {
+    if (!ok.test(f.name)) { skipped++; continue; }
+    if (files.length >= MAX) { over++; continue; }
+    files.push({ file: f, status: 'Ready', err: false, url: null });
+  }
+  msg.textContent = [over && `Only ${MAX} books at a time; ${over} not added.`, skipped && `${skipped} unsupported file(s) skipped.`].filter(Boolean).join(' ');
+  render();
+}
+
+function render() {
+  list.innerHTML = '';
+  files.forEach((it, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="n"></span><span class="s${it.err ? ' err' : ''}"></span>`;
+    li.querySelector('.n').textContent = it.file.name;
+    li.querySelector('.s').textContent = it.status;
+    if (it.url) {
+      const a = document.createElement('a');
+      a.className = 'btn'; a.href = it.url; a.textContent = 'Download';
+      a.download = it.file.name.replace(/\.[^.]+$/, '') + '.pdf';
+      li.append(a);
+    } else {
+      const x = document.createElement('button');
+      x.className = 'ghost'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove ' + it.file.name);
+      x.onclick = () => { files.splice(i, 1); render(); };
+      li.append(x);
+    }
+    list.append(li);
+  });
+  go.disabled = !files.length || files.every(f => f.url);
+}
+
+go.onclick = async () => {
+  go.disabled = true;
+  for (const it of files) {
+    if (it.url) continue;
+    try {
+      it.status = 'Reading…'; render();
+      const book = await readBook(it.file);
+      it.status = 'Making PDF…'; render();
+      await new Promise(r => setTimeout(r));
+      const blob = makePdf(book);
+      it.url = URL.createObjectURL(blob);
+      it.status = 'Done';
+    } catch (e) {
+      console.error(e);
+      it.status = e.message || 'Failed'; it.err = true;
+    }
+    render();
+  }
+  msg.textContent = 'Finished. Tap Download beside each book.';
+};
+
+/* ---------- readers: each returns {title, blocks:[{t:'h1'|'h2'|'p', x:string}]} ---------- */
+async function readBook(f) {
+  const ext = f.name.split('.').pop().toLowerCase();
+  const title = f.name.replace(/\.[^.]+$/, '');
+  if (ext === 'epub') return readEpub(f, title);
+  const text = await f.text();
+  if (ext === 'txt') return { title, blocks: text.split(/\n\s*\n/).map(x => ({ t: 'p', x: x.replace(/\s*\n\s*/g, ' ').trim() })).filter(b => b.x) };
+  if (ext === 'fb2') return { title, blocks: fromDom(new DOMParser().parseFromString(text, 'text/xml'), 'title,p,subtitle', title) };
+  return { title, blocks: fromDom(new DOMParser().parseFromString(text, 'text/html'), 'h1,h2,h3,h4,h5,h6,p,li,pre,blockquote', title) };
+}
+
+function fromDom(doc, sel, title) {
+  const out = [];
+  doc.querySelectorAll(sel).forEach(el => {
+    const x = el.textContent.replace(/\s+/g, ' ').trim();
+    if (!x) return;
+    const tag = el.tagName.toLowerCase();
+    out.push({ t: tag === 'h1' || tag === 'title' ? 'h1' : /^h[2-6]$/.test(tag) || tag === 'subtitle' ? 'h2' : 'p', x });
+  });
+  if (!out.length) {
+    const x = (doc.body || doc.documentElement).textContent.replace(/\s+/g, ' ').trim();
+    if (x) out.push({ t: 'p', x });
+  }
+  return out;
+}
+
+function resolve(base, href) {
+  const parts = (base + decodeURIComponent(href.split('#')[0])).split('/'), out = [];
+  for (const p of parts) { if (p === '..') out.pop(); else if (p && p !== '.') out.push(p); }
+  return out.join('/');
+}
+
+async function readEpub(f, fallbackTitle) {
+  const zip = await JSZip.loadAsync(f);
+  const cont = zip.file('META-INF/container.xml');
+  if (!cont) throw new Error('Not a valid EPUB');
+  const opfPath = /full-path="([^"]+)"/.exec(await cont.async('string'))[1];
+  const base = opfPath.includes('/') ? opfPath.replace(/[^/]+$/, '') : '';
+  const opf = new DOMParser().parseFromString(await zip.file(opfPath).async('string'), 'text/xml');
+  const titleEl = opf.getElementsByTagNameNS('*', 'title')[0];
+  const author = opf.getElementsByTagNameNS('*', 'creator')[0];
+  const manifest = {};
+  for (const it of opf.getElementsByTagNameNS('*', 'item')) manifest[it.getAttribute('id')] = it.getAttribute('href');
+  const blocks = [];
+  for (const ref of opf.getElementsByTagNameNS('*', 'itemref')) {
+    const href = manifest[ref.getAttribute('idref')];
+    const entry = href && zip.file(resolve(base, href));
+    if (!entry) continue;
+    const doc = new DOMParser().parseFromString(await entry.async('string'), 'text/html');
+    doc.querySelectorAll('script,style').forEach(n => n.remove());
+    const got = fromDom(doc, 'h1,h2,h3,h4,h5,h6,p,li,pre,blockquote', '');
+    if (got.length && got[0].t === 'h1') got[0].newPage = true;
+    blocks.push(...got);
+  }
+  if (!blocks.length) throw new Error('No readable text (DRM or image-only book?)');
+  return { title: (titleEl && titleEl.textContent.trim()) || fallbackTitle, author: author ? author.textContent.trim() : '', blocks };
+}
+
+/* ---------- PDF ---------- */
+function clean(s) {
+  return s.replace(/[^\u0020-\u007E\u00A0-\u00FF\u2018\u2019\u201C\u201D\u2013\u2014\u2026\u2022]/g, '?');
+}
+
+function makePdf(book) {
+  const doc = new jspdf.jsPDF({ unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  const M = 60, width = W - M * 2;
+  let y = M;
+
+  const write = (text, size, style, gapAfter, lead) => {
+    doc.setFont('times', style); doc.setFontSize(size);
+    const lh = size * (lead || 1.4);
+    for (const line of doc.splitTextToSize(clean(text), width)) {
+      if (y + lh > H - M) { doc.addPage(); y = M; }
+      doc.text(line, M, y + size);
+      y += lh;
+    }
+    y += gapAfter;
+  };
+
+  doc.setFont('times', 'bold'); doc.setFontSize(26);
+  y = H / 3;
+  write(book.title, 26, 'bold', 14, 1.25);
+  if (book.author) write(book.author, 14, 'italic', 0);
+  doc.addPage(); y = M;
+
+  for (const b of book.blocks) {
+    if (b.t === 'h1') {
+      if (b.newPage && y > M) { doc.addPage(); y = M; }
+      write(b.x, 20, 'bold', 14, 1.3);
+    } else if (b.t === 'h2') {
+      y += 6; write(b.x, 14, 'bold', 8, 1.3);
+    } else write(b.x, 11.5, 'normal', 7, 1.45);
+  }
+
+  const n = doc.getNumberOfPages();
+  for (let i = 2; i <= n; i++) {
+    doc.setPage(i); doc.setFont('times', 'normal'); doc.setFontSize(9);
+    doc.text(String(i - 1), W / 2, H - 30, { align: 'center' });
+  }
+  return doc.output('blob');
+}
+</script>
+</body>
+</html>
